@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.bunq.sdk.context.ApiContext;
-import com.bunq.sdk.context.ApiEnvironmentType;
 import com.bunq.sdk.context.BunqContext;
 import com.bunq.sdk.model.generated.endpoint.InsightEventApiObject;
 import com.bunq.sdk.model.generated.endpoint.PaymentApiObject;
@@ -24,18 +23,10 @@ import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 
 public class Main {
     public static void main(String[] args) {
-        ApiContext apiContext = ApiContext.create(
-            ApiEnvironmentType.SANDBOX,
-            System.getenv("BUNQ_SANDBOX_API_KEY"),
-            System.getenv("USER")
-        );
-        apiContext.save("bunq-config.conf");
+        ApiContext apiContext = ApiContext.restore();
         BunqContext.loadApiContext(apiContext); //load the API context to use in your app
 
-        //PaymentApiObject.create(new AmountObject("1","EUR"), new PointerObject("EMAIL", "sugardaddy@bunq.com","Sugar Daddy"), "coffee");
-
         List<Document> documents = new ArrayList<>();
-        documents.add(Document.from("I paid 1 EUR for coffee"));
         InsightEventApiObject.list(
             Map.of("time_start", Instant.now().minus(31, ChronoUnit.DAYS).toString(), "time_end", Instant.now().toString())
             ).getValue().forEach(insightEventApiObject -> {
@@ -44,6 +35,9 @@ public class Main {
                     String.format("I paid %s %s for %s ", payment.getAmount().getValue() ,payment.getAmount().getCurrency(), payment.getDescription())
                 ));
             });
+        if(documents.isEmpty()) {//make sure the list is not empty
+            documents.add(Document.from("I paid 1 EUR for coffee"));
+        }
 
         ChatLanguageModel chatModel = OpenAiChatModel.builder()
             .apiKey("demo")
